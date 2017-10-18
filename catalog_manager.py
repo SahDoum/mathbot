@@ -1,4 +1,5 @@
-from models import Catalog, Book, ProposeBook
+from models import Catalog, Book, BookIndex, ProposeBook
+from peewee import fn
 
 from telebot import types
 
@@ -93,7 +94,7 @@ class CatalogManager:
     @staticmethod
     def is_catalog_name(cat_name):
         try:
-            Catalog.get(name == cat_name)
+            Catalog.get(Catalog.name == cat_name)
             return True
         except Catalog.DoesNotExist:
             return False
@@ -264,13 +265,15 @@ class CatalogManager:
     @staticmethod
     def get_books_by_query(query):
         offset = int(query.offset) if query.offset else 0
-        books_limit = 10
-        request = query.query
+        books_limit = 4
+        request = query.query.lower()
 
         # catalog = Catalog.select().where(Catalog.name % request+'%')).get()
-        db_request = or_(Book.name.like('%'+request+'%'),
-                         Book.author.like('%'+request+'%'))
-        books = Book.select().where(Book.name % '%'+request+'%' | Book.author % '%'+request+'%' ).limit(books_limit).offset(offset)
+        # db_request = or_(Book.name.like('%'+request+'%'), Book.author.like('%'+request+'%'))
+        # db_request = fn.Lower(Book.name).contains(request)# | fn.Lower(Book.author).contains(request)
+        books = Book.select().join(BookIndex, on=(Book.id == BookIndex.docid)).where(BookIndex.contain(request)).order_by(BookIndex.bm25()) # .offset(offset).limit(books_limit)
+        # books = Book.search(request)#
+        print('Requst:\n'+request)
         # if catalog:
         #     db_request = or_(Book.catalog == catalog.name, db_request)
 
@@ -278,9 +281,30 @@ class CatalogManager:
 
     @staticmethod
     def get_catalog_inline(query):
+        text = 'Над одним математиком все время подшучивали его нематематические друзья,' \
+               ' поскольку у него была совершенно абстрактная область, никак не относящаяся к реальному миру.\n' \
+               'Однажды ему это надоело и он решил найти какие-нибудь приложения в математике. ' \
+               'Но поскольку его специальность (математическая логика) была далека от практических применений,'\
+                'он решил сходить на какой-нибудь семинар в другой области. '\
+                'К своей удаче, он нашел семинар по теории шестеренок, который проходил завтра. \n'\
+                'Наконец - сказал он самому себе, - нет ничего более прикладного, чем это,'\
+                'теперь я смогу доказать своим друзьям что математика имеет прямое отношение к настоящему миру \n'\
+                'На следующий день он был так взволнован, что пришел на 5 минут раньше и занял место в первом ряду.'\
+                'Когда семинар начался, лектор встал и начал: Поскольку теория шестеренок со счетным числом зубьев давно изучена…'
+
+        return ([types.InlineQueryResultArticle(
+                    id='0',
+                    title="Технические неполадки, извините за неудобства",
+                    # description=cat.name,
+                    input_message_content=types.InputTextMessageContent(
+                    message_text=text)
+                )],
+                None)
+
         books = CatalogManager.get_books_by_query(query)
         offset = int(query.offset) if query.offset else 0
         next_offset = offset+len(books)
+        print(str(next_offset))
 
         if books:
             answer = []

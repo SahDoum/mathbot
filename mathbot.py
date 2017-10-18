@@ -1,9 +1,10 @@
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
+import sys
 import time
+import threading
 
-import telebot
-from settings import API_TOKEN2
+from __init__ import bot, commands_handler
 
 from catalog_manager import CatalogManager
 from models import MathUser
@@ -18,7 +19,8 @@ CHANNEL_NAME = '@mathcatalog'
 
 text_messages = {
     'help':
-        'Мне надоело каждый раз, когда спрашивают, что почитать по матану или линейке, скидывать одни и те же книги, поэтому я запилил этого бота и каталог @mathcatalog\n\n'
+        'Мне надоело каждый раз, когда спрашивают, что почитать по матану или линейке, '
+        'скидывать одни и те же книги, поэтому я запилил этого бота и каталог @mathcatalog\n\n'
         'Для того, чтобы начать пользоваться — вызовите любую команду: /lib /lit /catalog\n'
         'Или набирайте @sosiska_v_teste_bot в inline-режиме и затем ищите нужную вам книгу.\n'
         'Если вы готовы помочь с наполнением каталога, пишите мне: @AChekhonte\n',
@@ -58,26 +60,13 @@ text_messages = {
         '13. [МехМат МГУ 2017]'
         '(https://t.me/mechmath2017)\n'
         '14. [Канал Сосиска в тесте]'
-        '(https://t.me/mathcatalog)\n'
+        '(https://t.me/mathcatalog)\n',
+
+    'inline_mode':
+        '_Попробуйте набрать в поле для сообщения_ @sosiska\_v\_teste\_bot '
+        '_и название/автора/раздел книги, чтобы быстро скинуть её в чат._'
 }
 
-
-# Обработчик команд в функцию для хендлера распознающую команды
-def commands_handler(cmnds):
-    BOT_NAME = '@sosiska_v_teste_bot'
-
-    def wrapped(msg):
-        if not msg.text:
-            return False
-        s = msg.text.split(' ')[0]
-        if s in cmnds:
-            return True
-        if s.endswith(BOT_NAME) and s.split('@')[0] in cmnds:
-            return True
-        return False
-    return wrapped
-
-bot = telebot.TeleBot(API_TOKEN2, threaded=False)
 
     # ---- ---- ---- ---- ----
     # ---- BASIC COMMANDS ----
@@ -96,10 +85,14 @@ def links(message):
     bot.send_message(message.chat.id, text_messages['links'], disable_web_page_preview=True, parse_mode='Markdown')
 
 
-def delete_message(message):
-    time.sleep(1)
-    bot.reply_to(message, 'lol ')
-    #bot.delete_message(message.chat.id, message.message_id)
+# Handle '/admin'
+@bot.message_handler(commands=['admin'])
+def admininfo(message):
+    usr = MathUser.log_by_message(message)
+    if not usr.can_browse_commands():
+        return
+    bot.send_message(message.chat.id, text_messages['admin'])
+
 
 """
 @bot.message_handler(commands=['gif'])
@@ -116,14 +109,11 @@ def msg(message):
 
 """
 
+    # ---- ---- ---- ---- ----
+    # ---- SUBSCRIPTIONS ----
+    # ---- ---- ---- ---- ----
 
-# Handle '/admin'
-@bot.message_handler(commands=['admin'])
-def admininfo(message):
-    usr = MathUser.log_by_message(message)
-    if not usr.can_browse_commands():
-        return
-    bot.send_message(message.chat.id, text_messages['admin'])
+import  course
 
     # ---- ---- ---- ----
     # ---- Просмотр ----
@@ -134,11 +124,7 @@ def admininfo(message):
 @bot.message_handler(func=commands_handler(['/lit', '/catalog', '/lib']))
 def catalog_list(message):
     keyboard = CatalogManager.catalogs_button_keyboard()
-    catalog_message = bot.reply_to(message, "Список каталогов:", reply_markup=keyboard)
-    #if message.chat.id == 155493213:
-    #    t = threading.Thread(target=delete_message, args=(catalog_message,))
-    #    t.daemon = True
-    #    t.start()
+    bot.reply_to(message, "Список каталогов:", reply_markup=keyboard)
 
 
 @bot.callback_query_handler(func=lambda call: call.data.split(' ')[0] == 'catalog')
@@ -146,8 +132,11 @@ def callback_inline(call):
     if call.message:
         cat_id = int(call.data.split(' ', maxsplit=1)[1])
         dsc = CatalogManager.catalog_dsc(cat_id)
-        dsc += '_Попробуйте набрать в поле для сообщения_ @sosiska\_v\_teste\_bot _и название/автора/раздел книги, чтобы быстро скинуть её в чат._'
-        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=dsc, parse_mode='Markdown', disable_web_page_preview=True)
+        dsc += text_messages['inline_mode']
+        bot.edit_message_text(chat_id=call.message.chat.id,
+                              message_id=call.message.message_id,
+                              text=dsc, parse_mode='Markdown',
+                              disable_web_page_preview=True)
 
     # ---- ---- ----
     # ---- EDIT ----
@@ -513,7 +502,7 @@ def set_moder(message):
 def query_doc(query):
     answer, next_offset = CatalogManager.get_catalog_inline(query)
     if answer:
-        bot.answer_inline_query(query.id, answer, next_offset=next_offset)
+        bot.answer_inline_query(query.id, answer) # , next_offset=next_offset)
 
 """
 # Если будешь восстанавливать, поменяй метод, чтобы он передавал не query.query, а сразу query
@@ -525,97 +514,43 @@ def query_lib(query):
     bot.answer_inline_query(query.id, answer)
 """
 
-"""
-    # ---- ---- ---- ----
-    # ---- АНТИ-СПАМ ----
-    # ---- ---- ---- ----
-
-NEW_USERS = {}
-MAX_BAN_COUNTER = 5
-MAX_MSG_CHECK = 5
-
-@bot.message_handler(func=lambda m: True, content_types=['new_chat_members'])
-def new_chat_participant(message):
-    chat_id = message.chat.id
-    #bot.send_message(chat_id, 'Привет, пидор!')
-    if not chat_id in NEW_USERS:
-	    NEW_USERS[chat_id] = {}
-
-    for usr in message.new_chat_members:
-        user_id = usr.id
-        NEW_USERS[chat_id][user_id] = {'msg':0,'cnt':0,'bans':[]}
-
-@bot.message_handler(content_types=["text", "photo"])
-def check_for_spammers(message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-
-    if chat_id in NEW_USERS:
-        if user_id in NEW_USERS[chat_id]:
-            if message.forward_from_chat: # or message.forward_from:
-                dsc = 'Это спам? Баним?'
-                keyboard = types.InlineKeyboardMarkup()
-                button = types.InlineKeyboardButton(text="Баним!", callback_data='banspammer '+str(user_id))
-                keyboard.add(button)
-                bot.reply_to(message, dsc, reply_markup=keyboard)
-            else:
-                NEW_USERS[chat_id][user_id]['msg']+=1
-                if NEW_USERS[chat_id][user_id]['msg'] >= MAX_MSG_CHECK:
-                    NEW_USERS[chat_id].pop(user_id)
-
-@bot.callback_query_handler(func=lambda call: call.data.split(' ')[0] == 'banspammer')
-def ban_spammer(call):
-    if call.message:
-        spammer_id = int(call.data.split(' ')[1])
-        chat_id = call.message.chat.id
-        user_id = call.from_user.id
-        if not spammer_id in NEW_USERS[chat_id]:
-            return
-        if user_id in NEW_USERS[chat_id][spammer_id]['bans']:
-            return
-        NEW_USERS[chat_id][spammer_id]['cnt']+=1
-        NEW_USERS[chat_id][spammer_id]['bans'].append(user_id)
-
-        if NEW_USERS[chat_id][spammer_id]['cnt'] >= MAX_BAN_COUNTER:
-            #bot.kick_chat_member(chat_id, spammer_id)
-            NEW_USERS[chat_id].pop(spammer_id)
-            bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text='Спамер зачищен!', reply_markup=None)
-        else:
-            keyboard = types.InlineKeyboardMarkup()
-            button = types.InlineKeyboardButton(text='Баним! — '+str(NEW_USERS[chat_id][spammer_id]['cnt']), callback_data=call.data)
-            keyboard.add(button)
-            bot.edit_message_reply_markup(chat_id=chat_id, message_id=call.message.message_id, reply_markup=keyboard)
-# ---- ----
-"""
-
-
 # ---- POLLING ---- #
 
 while __name__ == '__main__':
+
+    t = threading.Thread(target=course.listochki_updater, args=())
+    t.daemon = True
+    t.start()
+
     try:
         bot.polling(none_stop=True, interval=1)
         time.sleep(1)
 
+    # завершение работы из консоли стандартным Ctrl-C
+    except KeyboardInterrupt as e:
+        print('\n{0}: Keyboard Interrupt. Good bye.\n'.format(time.time()))
+        sys.exit()
+
     # из-за Telegram API иногда какой-нибудь пакет не доходит
     except ReadTimeout as e:
-        print("{0}: Read Timeout. Because of Telegram API.\nWe are offline. Reconnecting in 5 seconds.\n".format(time.time()))
+        print('{0}: Read Timeout. Because of Telegram API.\n '
+              'We are offline. Reconnecting in 5 seconds.\n'.format(time.time()))
         time.sleep(5)
 
     # если пропало соединение, то пытаемся снова через минуту
     except ConnectionError as e:
-        print("{0}: Connection Error.\nWe are offline. Reconnecting in 60 seconds.\n".format(time.time()))
+        print('{0}: Connection Error.\n'
+              'We are offline. Reconnecting in 60 seconds.\n'.format(time.time()))
         time.sleep(60)
 
     # если Python сдурит и пойдёт в бесконечную рекурсию (не особо спасает)
     except RuntimeError as e:
-        print("{0}: Runtime Error.\nRetrying in 3 seconds.\n".format(time.time()))
+        print('{0}: Runtime Error.\n'
+              'Retrying in 3 seconds.\n'.format(time.time()))
         time.sleep(3)
-
-    # завершение работы из консоли стандартным Ctrl-C
-    except KeyboardInterrupt as e:
-        print("\n{0}: Keyboard Interrupt. Good bye.\n".format(time.time()))
-        # sys.exit()
-
+        
     # если что-то неизвестное — от греха вырубаем с корнем. Создаём алёрт файл для .sh скрипта
     except Exception as e:
-        print("{0}: Unknown Exception:\n{1}\n{2}\n\n Shutting down.".format(time.time(), e.message, e.args))
+        print('{0}: Unknown Exception:\n'
+              '{1}: {2}\n\n'
+              'Shutting down.'.format(time.time(), str(e), e.args))

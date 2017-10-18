@@ -1,29 +1,46 @@
 from peewee import *
+from playhouse.sqlite_ext import *
 
-database = SqliteDatabase('database.db', **{})
+database = SqliteExtDatabase('database.db', **{})
+
 
 class UnknownField(object):
     def __init__(self, *_, **__): pass
+
 
 class BaseModel(Model):
     class Meta:
         database = database
 
+
 class Book(BaseModel):
-    author = CharField(null=True)
-    catalog = CharField(null=True)
-    comments = TextField(null=True)
-    link = CharField(null=True)
-    name = CharField(null=True)
+    name = SearchField()
+    author = SearchField()
+    catalog = SearchField()
+    comments = SearchField()
+    link = SearchField(unindexed=True)
 
     class Meta:
         db_table = 'bot_math_books'
+
+
+class BookIndex(FTSModel):
+    name = SearchField()
+    author = SearchField()
+    comments = SearchField()
+
+    class Meta:
+        database = database
+        # Use the porter stemming algorithm to tokenize content.
+        extension_options = {'tokenize': 'porter'}
+
 
 class Catalog(BaseModel):
     name = CharField(null=True, unique=True)
 
     class Meta:
         db_table = 'bot_math_catalogs'
+
 
 class ProposeBook(BaseModel):
     author = CharField(null=True)
@@ -36,6 +53,10 @@ class ProposeBook(BaseModel):
 
     class Meta:
         db_table = 'bot_math_propose_books'
+
+
+# MathUsers for adding books
+
 
 class MathUser(BaseModel):
     name = CharField(null=True)
@@ -70,7 +91,7 @@ class MathUser(BaseModel):
             usr = MathUser.get(MathUser.usr_id == callback.from_user.id)
             return usr
         except:
-            return MathUser(message.from_user.id)
+            return MathUser(callback.from_user.id)
 
     def register_user(self):
         self.save()
@@ -95,3 +116,18 @@ class MathUser(BaseModel):
 
     def can_browse_commands(self):
         return (self.status in ['Admin', 'Moder', 'Creator'])
+
+'''
+def store_document(book):
+    BookIndex.insert({
+        BookIndex.docid: book.id,
+        BookIndex.name: fn.lower(book.name),
+        BookIndex.author: fn.lower(book.author),
+        BookIndex.comments: fn.lower(book.comments)}).execute()
+
+BookIndex.drop_table()
+database.create_tables([BookIndex])
+
+for book in Book.select():
+    store_document(book)
+'''
