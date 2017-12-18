@@ -1,4 +1,4 @@
-from models import Catalog, Book, BookIndex, ProposeBook
+from models.models import Catalog, Book, FTSBook, ProposeBook
 from peewee import fn
 
 from telebot import types
@@ -10,6 +10,10 @@ class CatalogManager:
 
     def __repr__(self):
         return '<Catalog>'
+
+    # ---- ---- ---- ----
+    # ---- CATALOG VIEW ----
+    # ---- ---- ---- ----
 
     @staticmethod
     def get_catalog_name(cat_id):
@@ -116,7 +120,7 @@ class CatalogManager:
         for book in books:
             book.catalog = new_name
 
-        db.session.commit()
+        # db.session.commit()
 
     # ---- book adding ----
 
@@ -264,52 +268,20 @@ class CatalogManager:
 
     @staticmethod
     def get_books_by_query(query):
-        offset = int(query.offset) if query.offset else 0
-        books_limit = 4
-        request = query.query.lower()
-
-        # catalog = Catalog.select().where(Catalog.name % request+'%')).get()
-        # db_request = or_(Book.name.like('%'+request+'%'), Book.author.like('%'+request+'%'))
-        # db_request = fn.Lower(Book.name).contains(request)# | fn.Lower(Book.author).contains(request)
-        books = Book.select().join(BookIndex, on=(Book.id == BookIndex.docid)).where(BookIndex.contain(request)).order_by(BookIndex.bm25()) # .offset(offset).limit(books_limit)
-        # books = Book.search(request)#
-        print('Requst:\n'+request)
-        # if catalog:
-        #     db_request = or_(Book.catalog == catalog.name, db_request)
-
+        books = FTSBook.search_bm25(query.query)
         return books
 
     @staticmethod
     def get_catalog_inline(query):
-        text = 'Над одним математиком все время подшучивали его нематематические друзья,' \
-               ' поскольку у него была совершенно абстрактная область, никак не относящаяся к реальному миру.\n' \
-               'Однажды ему это надоело и он решил найти какие-нибудь приложения в математике. ' \
-               'Но поскольку его специальность (математическая логика) была далека от практических применений,'\
-                'он решил сходить на какой-нибудь семинар в другой области. '\
-                'К своей удаче, он нашел семинар по теории шестеренок, который проходил завтра. \n'\
-                'Наконец - сказал он самому себе, - нет ничего более прикладного, чем это,'\
-                'теперь я смогу доказать своим друзьям что математика имеет прямое отношение к настоящему миру \n'\
-                'На следующий день он был так взволнован, что пришел на 5 минут раньше и занял место в первом ряду.'\
-                'Когда семинар начался, лектор встал и начал: Поскольку теория шестеренок со счетным числом зубьев давно изучена…'
-
-        return ([types.InlineQueryResultArticle(
-                    id='0',
-                    title="Технические неполадки, извините за неудобства",
-                    # description=cat.name,
-                    input_message_content=types.InputTextMessageContent(
-                    message_text=text)
-                )],
-                None)
-
         books = CatalogManager.get_books_by_query(query)
-        offset = int(query.offset) if query.offset else 0
-        next_offset = offset+len(books)
-        print(str(next_offset))
 
-        if books:
+        if len(books):
             answer = []
+            print('\n\n\nРУН РУН РУН')
             # генерим инлайновые панельки для книг
-            for book in books:
+            for fts_book in books:
+                print('Book: {}\n'.format(fts_book.docid))
+                book = Book.get(Book.id == fts_book.origin_id)
                 title = '"{}" {}'.format(book.name, book.author)
                 if book.link:
                     result = types.InlineQueryResultDocument(
@@ -332,7 +304,7 @@ class CatalogManager:
                         input_message_content=book_dsc
                     )
                 answer.append(result)
-            return (answer, str(next_offset))
+            return (answer, None) # str(next_offset))
 
         return (None, None)
 

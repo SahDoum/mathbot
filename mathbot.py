@@ -1,19 +1,17 @@
-from requests.exceptions import ConnectionError
-from requests.exceptions import ReadTimeout
+import sys
 import sys
 import time
-import threading
-
-from __init__ import bot, commands_handler
-
-from catalog_manager import CatalogManager
-from models import MathUser
 
 from telebot import types
 
+from __init__ import bot, commands_handler
+from catalog_manager import CatalogManager
+from models.users import MathUser
 
 # from catalog import engine
 # import time
+
+import models.course
 
 CHANNEL_NAME = '@mathcatalog'
 
@@ -113,9 +111,7 @@ def msg(message):
     # ---- SUBSCRIPTIONS ----
     # ---- ---- ---- ---- ----
 
-import  course
-
-    # ---- ---- ---- ----
+# ---- ---- ---- ----
     # ---- Просмотр ----
     # ---- ---- ---- ----
 
@@ -502,6 +498,7 @@ def set_moder(message):
 def query_doc(query):
     answer, next_offset = CatalogManager.get_catalog_inline(query)
     if answer:
+        print('ID: ' + query.id)
         bot.answer_inline_query(query.id, answer) # , next_offset=next_offset)
 
 """
