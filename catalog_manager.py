@@ -1,4 +1,4 @@
-from models.models import Catalog, Book, FTSBook, ProposeBook
+from models.models import Catalog, Book, FTSBook, ProposeBook, store_document
 from peewee import fn
 
 from telebot import types
@@ -135,7 +135,9 @@ class CatalogManager:
 
     @staticmethod
     def save_edit(usr_id):
-        CatalogManager.edit_list[usr_id].save()
+        book = CatalogManager.edit_list[usr_id]
+        book.save()
+        store_document(book)
         CatalogManager.edit_list.pop(usr_id)
 
     @staticmethod

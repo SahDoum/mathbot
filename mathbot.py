@@ -518,7 +518,7 @@ def query_lib(query):
 
 while __name__ == '__main__':
 
-    t = threading.Thread(target=course.listochki_updater, args=())
+    t = threading.Thread(target=models.course.listochki_updater, args=())
     t.daemon = True
     t.start()
 

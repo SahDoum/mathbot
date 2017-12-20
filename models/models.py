@@ -48,8 +48,6 @@ class ProposeBook(BaseModel):
         db_table = 'bot_math_propose_books'
 
 
-
-
 def store_document(book):
     FTSBook.insert({
         FTSBook.docid: book.id,
