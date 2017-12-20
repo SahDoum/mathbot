@@ -20,6 +20,8 @@ class FTSBook(FTSModel):
     name = SearchField()
     catalog = SearchField()
     comments = SearchField()
+    catalog = SearchField()
+
     origin_id = IntegerField()
 
     class Meta:
@@ -51,10 +53,12 @@ class ProposeBook(BaseModel):
 def store_document(book):
     FTSBook.insert({
         FTSBook.docid: book.id,
-        FTSBook.name: fn.lower(book.name),
-        FTSBook.author: fn.lower(book.author),
-        FTSBook.comments: fn.lower(book.comments),
+        FTSBook.name: book.name,
+        FTSBook.author: book.author,
+        FTSBook.comments: book.comments,
+        FTSBook.catalog: book.catalog,
         FTSBook.origin_id: book.id}).execute()
+
 
 '''
 print('1')
@@ -68,7 +72,7 @@ database.create_tables([FTSBook])
 for book in Book.select():
     store_document(book)
 
-query = FTSBook.search_bm25('Панов')
+query = FTSBook.search_bm25('Панов', weights=[1, 1, 1, 1, 0.1])
 for el in query:
-    print(f'{el.name} | {el.author}')
+    print(f'{el.name} | {el.catalog}')
 '''

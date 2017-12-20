@@ -14,6 +14,13 @@ from models.users import MathUser
 # from catalog import engine
 # import time
 
+'''
+# Handle all
+@bot.message_handler(content_types=['text'])
+def send_welcome(message):
+    print('1')
+'''
+
 import models.course
 
 CHANNEL_NAME = '@mathcatalog'

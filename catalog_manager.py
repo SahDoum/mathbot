@@ -308,6 +308,7 @@ class CatalogManager:
                 answer.append(result)
             return (answer, None) # str(next_offset))
 
+        print('Nothing found')
         return (None, None)
 
     @staticmethod
