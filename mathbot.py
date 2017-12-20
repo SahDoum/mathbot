@@ -1,6 +1,9 @@
 import sys
-import sys
 import time
+import threading
+
+from requests.exceptions import ConnectionError
+from requests.exceptions import ReadTimeout
 
 from telebot import types
 
