@@ -7,7 +7,7 @@ from requests.exceptions import ReadTimeout
 
 from telebot import types
 
-from __init__ import bot, commands_handler
+from __init__ import bot, commands_handler, BOT_NAME, statistics
 from catalog_manager import CatalogManager
 from models.users import MathUser
 
@@ -127,7 +127,7 @@ def msg(message):
 
 
 # Handle '/lit'
-@bot.message_handler(func=commands_handler(['/lit', '/catalog', '/lib']))
+@bot.message_handler(func=commands_handler(['/lib', '/catalog', '/lit']))
 def catalog_list(message):
     keyboard = CatalogManager.catalogs_button_keyboard()
     bot.reply_to(message, "Список каталогов:", reply_markup=keyboard)
@@ -510,6 +510,7 @@ def query_doc(query):
     if answer:
         print('ID: ' + query.id)
         bot.answer_inline_query(query.id, answer) # , next_offset=next_offset)
+        statistics.track_by_user(BOT_NAME, 'Inline search: ' + query.query, query.from_user)
 
 """
 # Если будешь восстанавливать, поменяй метод, чтобы он передавал не query.query, а сразу query
