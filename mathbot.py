@@ -1,7 +1,7 @@
 import sys
 import time
 import threading
-
+import telebot
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
 
@@ -556,7 +556,7 @@ while __name__ == '__main__':
         print('{0}: Runtime Error.\n'
               'Retrying in 3 seconds.\n'.format(time.time()))
         time.sleep(3)
-        
+
     # если что-то неизвестное — от греха вырубаем с корнем. Создаём алёрт файл для .sh скрипта
     except Exception as e:
         print('{0}: Unknown Exception:\n'
