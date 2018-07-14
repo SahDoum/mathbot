@@ -4,7 +4,7 @@ import telebot
 from settings import API_TOKEN2
 
 import sys
-sys.path.append("../statistics display")
+sys.path.append("../bot_statistics")
 import bot_statistics as statistics
 
 BOT_NAME = '@sosiska_v_teste_bot'
@@ -31,8 +31,7 @@ def commands_handler(cmnds, inline=False):
 
     return wrapped
 
+bot = telebot.TeleBot(API_TOKEN2, threaded=False);
 
 logger = telebot.logger
 telebot.logger.setLevel(logging.INFO)
-
-bot = telebot.TeleBot(API_TOKEN2, threaded=False)
