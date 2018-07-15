@@ -1,0 +1,4 @@
+pytelegrambotapi
+peewee
+requests
+lxml
