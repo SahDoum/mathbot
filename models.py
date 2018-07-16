@@ -3,7 +3,7 @@ from settings import IUMURL
 import requests
 from lxml import etree
 from playhouse.sqlite_ext import SqliteExtDatabase, CharField, Model, TextField, ForeignKeyField, \
-    FTSModel, SearchField, IntegerField, RowIDField, DateTimeField
+    FTSModel, SearchField, IntegerField, RowIDField, DateTimeField, DoesNotExist
 
 
 db = SqliteExtDatabase('data.db')
@@ -15,7 +15,7 @@ class BaseModel(Model):
 
 
 class User(BaseModel):
-    user_id = IntegerField()
+    user_id = IntegerField(unique=True)
     first_name = CharField()
     role = CharField()
 
@@ -45,14 +45,51 @@ class User(BaseModel):
 class Catalog(BaseModel):
     name = CharField(null=True, unique=True)
 
+    @classmethod
+    def get_catalog_description(cls, catalog_id):
+        try:
+            catalog = cls.get(catalog_id)
+        except DoesNotExist:
+            return
+
+        books = catalog.books
+        if books:
+            dsc = f'`Список книг в разделе "{catalog.name}":`\n\n'
+            for i, book in enumerate(books):
+                dsc += f'{i}. {book.get_book_description()}\n'
+            return dsc
+
 
 class Book(BaseModel):
     author = CharField()
     name = CharField()
-    catalog = ForeignKeyField(Catalog, backref='books')
-    description = TextField()
-    link = CharField()
+    comments = TextField()
     added_by = ForeignKeyField(User, backref='books')
+    catalog = ForeignKeyField(Catalog, backref='books', null=True)
+    link = CharField(null=True)
+
+    def create_fts_index(self):
+        BookIndex.store_book(self)
+
+    def get_book_description_md(self):
+        if self.link:
+            book_name = f'"[{self.name}]({self.link})"'
+        else:
+            book_name = f'*"{self.name}"*'
+        dsc = f'{book_name} {self.author}\n'
+
+        if self.comments:
+            dsc += '_'+self.comments+'_\n'
+        return dsc
+
+    def get_book_description(self):
+        dsc = '{} {}\n'.format(self.name, self.author)
+
+        if self.comments:
+            dsc += self.comments + '\n'
+        if self.link:
+            dsc += '{}'.format(self.link)
+        return dsc
 
 
 class BookIndex(FTSModel):
@@ -60,7 +97,7 @@ class BookIndex(FTSModel):
     author = SearchField()
     name = SearchField()
     catalog = SearchField()
-    description = SearchField()
+    comments = SearchField()
 
     class Meta:
         database = db
@@ -72,7 +109,7 @@ class BookIndex(FTSModel):
             cls.author: book.author,
             cls.name: book.name,
             cls.catalog: book.catalog.name,
-            cls.description: book.description
+            cls.comments: book.comments
         }).execute()
 
 
