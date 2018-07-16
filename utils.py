@@ -2,11 +2,17 @@ import datetime
 import time
 
 from models import IUMCourse, Subscription, SubscriptionChat
-from settings import IUMURL
+from settings import IUMURL, API_TOKEN, LOGGING_LEVEL, CHANNEL_NAME
 
+import telebot
 from telebot import types
 
+bot = telebot.TeleBot(API_TOKEN)
+logger = telebot.logger
+logger.setLevel(LOGGING_LEVEL)
 
+
+# Reply markup constructors
 def get_subscription_menu_keyboard():
     keyboard = types.InlineKeyboardMarkup()
     set_button = types.InlineKeyboardButton(
@@ -29,7 +35,7 @@ def get_subscription_menu_keyboard():
     return keyboard
 
 
-def get_subscriptions_keyboard(chat_id):
+def get_subscriptions_submenu_keyboard(chat_id):
     keyboard = types.InlineKeyboardMarkup()
     courses = IUMCourse.select()
     for cr in courses:
@@ -51,7 +57,7 @@ def get_subscriptions_keyboard(chat_id):
     return keyboard
 
 
-def get_unsubscriptions_keyboard(chat_id):
+def get_unsubscriptions_submenu_keyboard(chat_id):
     keyboard = types.InlineKeyboardMarkup()
     courses = IUMCourse.select()
     for cr in courses:
@@ -73,6 +79,7 @@ def get_unsubscriptions_keyboard(chat_id):
     return keyboard
 
 
+# Model creation args validators
 def get_course_args(lines):
     def check_timetable(timetable):
         # TODO: Clarify all related to timetable field and make input validation
@@ -88,16 +95,26 @@ def get_course_args(lines):
                     'program_url': program_url, 'timetable': timetable, 'last_subscription': ''}
 
 
-def sheets_updater(bot):
+def get_book_args(lines):
+    if len(lines) >= 3:
+        name, author, *comments = lines
+        if not all((name, author, comments)):
+            return
+        else:
+            return {'name': name, 'author': author, 'comments': '\n'.join(comments)}
+
+
+# Separate thread sheet updater
+def sheets_updater():
     while True:
-        send_new_sheets(bot)
+        send_new_sheets()
         t = datetime.datetime.now()
         time_str = t.strftime('%H/%M/')
         print(time_str + ' Sheets updated')
         time.sleep(60*60)
 
 
-def send_new_sheets(bot):
+def send_new_sheets():
     courses = IUMCourse.select()
     for cr in courses:
         cr.update_homework()
@@ -117,10 +134,20 @@ def send_new_sheets(bot):
         for sub in subscriptions:
             print('Subscription:')
             print(sub.chat_id)
-            send_sheet_to(bot, sub.chat.chat_id, cr, extra_caption='Новый листочек по предмету:\n')  # (link, name)
+            send_sheet_to(sub.chat.chat_id, cr, extra_caption='Новый листочек по предмету:\n')  # (link, name)
 
 
-def send_sheet_to(bot, chat_id, course, extra_caption=''):
+def send_sheet_to( chat_id, course, extra_caption=''):
     last_homework = course.get_last_homework()
     caption = extra_caption + course.name + ': ' + last_homework[1]
     bot.send_document(chat_id, last_homework[0], caption=caption)
+
+
+def upload_book(message, book):
+    book_description = book.get_book_description_md()
+
+    bot.send_message(CHANNEL_NAME, book_description, parse_mode='Markdown', disable_notification=True)
+    result = bot.forward_message(CHANNEL_NAME, message.chat.id, message.message_id, disable_notification=True)
+
+    link = f'https://t.me/{CHANNEL_NAME[1:]}/{result.message_id}'
+    return link
