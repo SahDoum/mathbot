@@ -96,7 +96,7 @@ def set_file(message, book_args):
     book.create_fts_index()
 
 
-def search_book(inline_query: types.InlineQuery):
+def inline_search_book(inline_query: types.InlineQuery):
     books = BookIndex.search_bm25(inline_query.query)
 
     if len(books):
