@@ -1,5 +1,6 @@
 from models import SubscriptionChat, IUMCourse, Subscription
-from utils import get_subscription_menu_keyboard, get_subscriptions_submenu_keyboard, get_unsubscriptions_submenu_keyboard, bot
+from utils import get_subscription_menu_keyboard, get_subscriptions_submenu_keyboard, \
+    get_unsubscriptions_submenu_keyboard, bot
 
 from peewee import DoesNotExist
 from telebot import types
@@ -23,7 +24,8 @@ def cmd_set(message):
                  parse_mode='Markdown', reply_markup=keyboard)
 
 
-def subscription_menu_callback(callback_query):
+# Callback handlers
+def cb_subscription_menu(callback_query):
     chat_id = callback_query.message.chat.id
     message_id = callback_query.message.message_id
     text = 'Выберите действие с подписками на листочки в *этом* чате:'
@@ -33,7 +35,7 @@ def subscription_menu_callback(callback_query):
     bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=keyboard)
 
 
-def subscription_menu_close_callback(callback_query):
+def cb_subscription_menu_close(callback_query):
     chat_id = callback_query.message.chat.id
     message_id = callback_query.message.message_id
     text = 'Завершено.'
@@ -41,7 +43,7 @@ def subscription_menu_close_callback(callback_query):
     bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=text)
 
 
-def subscription_menu_set_pressed_callback(callback_query):
+def cb_subscription_menu_set_pressed(callback_query):
     chat_id = callback_query.message.chat.id
     message_id = callback_query.message.message_id
     text = 'Выберите курс на листочки которого вы хотите подписаться в *этом* чате:'
@@ -51,7 +53,7 @@ def subscription_menu_set_pressed_callback(callback_query):
     bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=keyboard)
 
 
-def subscription_menu_unset_pressed_callback(callback_query):
+def cb_subscription_menu_unset_pressed(callback_query):
     chat_id = callback_query.message.chat.id
     message_id = callback_query.message.message_id
     text = 'Выберите курс на листочки которого вы хотите отписаться в *этом* чате:'
@@ -61,7 +63,7 @@ def subscription_menu_unset_pressed_callback(callback_query):
     bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=keyboard)
 
 
-def set_subscription_callback(callback_query):
+def cb_set_subscription(callback_query):
     course_id = int(callback_query.data.split(' ')[1])
     message = callback_query.message
     chat_id = message.chat.id
@@ -82,7 +84,7 @@ def set_subscription_callback(callback_query):
     bot.edit_message_reply_markup(chat_id=chat_id, message_id=message.message_id, reply_markup=keyboard)
 
 
-def unset_subscription_callback(callback_query):
+def cb_unset_subscription(callback_query):
     course_id = int(callback_query.data.split(' ')[1])
     message = callback_query.message
     chat_id = message.chat.id
