@@ -48,7 +48,7 @@ class Catalog(BaseModel):
     @classmethod
     def get_catalog_description(cls, catalog_id):
         try:
-            catalog = cls.get(catalog_id)
+            catalog = cls.get(id=catalog_id)
         except DoesNotExist:
             return
 
@@ -67,6 +67,13 @@ class Book(BaseModel):
     added_by = ForeignKeyField(User, backref='books')
     catalog = ForeignKeyField(Catalog, backref='books', null=True)
     link = CharField(null=True)
+
+    @classmethod
+    def delete_book(cls, book_id):
+        book = cls.get(id=book_id)
+        book_index = BookIndex.get(rowid=book_id)
+        book.delete_instance()
+        book_index.delete_instance()
 
     def create_fts_index(self):
         BookIndex.store_book(self)

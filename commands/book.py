@@ -1,4 +1,4 @@
-from utils import bot, get_book_args, upload_book
+from utils import bot, get_book_args, upload_book, get_show_books_keyboard, get_delete_book_keyboard
 from models import User, Book, BookIndex, Catalog
 from settings import CHANNEL_NAME
 
@@ -26,6 +26,21 @@ def cmd_add_book(message: types.Message):
     bot.register_next_step_handler(message, add_book)
 
 
+def cmd_show_books(message: types.Message):
+    user_id = message.from_user.id
+    try:
+        user = User.get(user_id)
+    except DoesNotExist:
+        return
+
+    if not user.can_add():
+        return
+
+    text, keyboard = get_show_books_keyboard(1)
+
+    bot.reply_to(message, text, reply_markup=keyboard, parse_mode='Markdown')
+
+
 # Next step handlers
 def add_book(message: types.Message):
     user_id = message.from_user.id
@@ -46,7 +61,7 @@ def add_book(message: types.Message):
 
 
 def set_catalog(message, book_args):
-    if message.text.startswith('/break'):
+    if message.text and message.text.startswith('/break'):
         return
 
     try:
@@ -96,22 +111,56 @@ def set_file(message, book_args):
     book.create_fts_index()
 
 
-def inline_search_book(inline_query: types.InlineQuery):
-    books = BookIndex.search_bm25(inline_query.query)
+# Callback handler
+def cb_books_page(callback_query):
+    cb_args = callback_query.data.split(':')
+    if len(cb_args) == 2 and cb_args[1].isdigit():
+        chat_id = callback_query.message.chat.id
+        message_id = callback_query.message.message_id
+        page = int(cb_args[1])
+        text, keyboard = get_show_books_keyboard(page)
 
-    if len(books):
-        answer = []
+        bot.edit_message_text(text, chat_id, message_id, reply_markup=keyboard, parse_mode='Markdown')
+
+
+def cb_delete_book(callback_query: types.CallbackQuery):
+    cb_args = callback_query.data.split(':')
+    if len(cb_args) == 2 and cb_args[1].isdigit():
+        try:
+            user = User.get(user_id=callback_query.from_user.id)
+        except DoesNotExist:
+            bot.answer_callback_query(callback_query.id, text='Ошибка!')
+            return
+
+        if user.can_edit():
+            try:
+                Book.delete_book(int(cb_args[1]))
+                bot.answer_callback_query(callback_query.id, text='Успешно удалено!')
+            except DoesNotExist:
+                bot.answer_callback_query(callback_query.id, text='Ошибка!')
+
+
+# Inline handler
+def inline_search_book(inline_query: types.InlineQuery):
+    indexed_books = BookIndex.search_bm25(inline_query.query)
+
+    if len(indexed_books):
+        answer = list()
         # Generate inline book panels
-        for book in books:
-            book = Book.get(book.rowid)
+        for indexed_book in indexed_books:
+            book = Book.get(id=indexed_book.rowid)
             title = '"{}" {}'.format(book.name, book.author)
+
+            keyboard = get_delete_book_keyboard(book.id)
+
             if book.link:
                 result = types.InlineQueryResultDocument(
-                    id='book' + str(book.id),
+                    id='book_id:' + str(book.id),
                     title=title,
                     description=book.comments,
                     document_url=book.link, mime_type='application/pdf',
-                    caption=book.get_book_description()
+                    caption=book.get_book_description(),
+                    reply_markup=keyboard
                 )
             else:
                 book_dsc = types.InputTextMessageContent(
@@ -120,10 +169,11 @@ def inline_search_book(inline_query: types.InlineQuery):
                     disable_web_page_preview=True
                 )
                 result = types.InlineQueryResultArticle(
-                    id='book' + str(book.id),
+                    id='book_id:' + str(book.id),
                     title=title,
                     description=book.comments,
-                    input_message_content=book_dsc
+                    input_message_content=book_dsc,
+                    reply_markup=keyboard
                 )
             answer.append(result)
 

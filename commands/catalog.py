@@ -13,7 +13,7 @@ def cmd_lib(message: telebot.types.Message):
 
 def cmd_add_catalog(message):
     try:
-        user = User.get(message.from_user.id)
+        user = User.get(user_id=message.from_user.id)
     except DoesNotExist:
         return
 

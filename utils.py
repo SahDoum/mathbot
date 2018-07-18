@@ -1,7 +1,8 @@
 import datetime
 import time
+from math import ceil
 
-from models import IUMCourse, Subscription, SubscriptionChat
+from models import IUMCourse, Subscription, SubscriptionChat, Book
 from settings import IUMURL, API_TOKEN, LOGGING_LEVEL, CHANNEL_NAME
 
 import telebot
@@ -79,6 +80,30 @@ def get_unsubscriptions_submenu_keyboard(chat_id):
     return keyboard
 
 
+def get_show_books_keyboard(page, limit=5):
+    books = Book.select()
+    books_on_page = books.paginate(page, limit)
+    pages_count = int(ceil(books.count()/limit))
+    keyboard = types.InlineKeyboardMarkup()
+
+    text = f'Количество книг: {books.count()}\n\n'
+    for i, book in enumerate(books_on_page):
+        text += f'Каталог: {book.catalog.name}\n{book.get_book_description_md()}\n\n'
+
+    # Add buttons with page numbers
+    keyboard.add(*[types.InlineKeyboardButton(
+        text=str(page_number+1), callback_data=f'book:{page_number+1}'
+    ) for page_number in range(pages_count)])
+
+    return text, keyboard
+
+
+def get_delete_book_keyboard(book_id):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text='Удалить книгу', callback_data=f'delete_book:{book_id}'))
+    return keyboard
+
+
 # Model creation args validators
 def get_course_args(lines):
     def check_timetable(timetable):
@@ -137,7 +162,7 @@ def send_new_sheets():
             send_sheet_to(sub.chat.chat_id, cr, extra_caption='Новый листочек по предмету:\n')  # (link, name)
 
 
-def send_sheet_to( chat_id, course, extra_caption=''):
+def send_sheet_to(chat_id, course, extra_caption=''):
     last_homework = course.get_last_homework()
     caption = extra_caption + course.name + ': ' + last_homework[1]
     bot.send_document(chat_id, last_homework[0], caption=caption)
