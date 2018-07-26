@@ -191,7 +191,7 @@ def forward_required(message_handler):
 
 def private_required(message_handler):
     def wrapper(message, *args, **kwargs):
-        if not message.type == 'private':
+        if not message.chat.type == 'private':
             bot.reply_to(message, 'Доступно только в приватном чате!')
         else:
             message_handler(message, *args, **kwargs)
