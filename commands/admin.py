@@ -1,18 +1,8 @@
 from models import User
-from utils import bot
+from utils import bot, forward_required
 
 from telebot import types
 from peewee import DoesNotExist
-
-
-def forward_required(message_handler):
-    def wrapper(message, *args, **kwargs):
-        if not message.forward_from:
-            bot.reply_to(message, 'Вы должны зафорвардить сообщение!')
-        else:
-            message_handler(message, *args, **kwargs)
-
-    return wrapper
 
 
 def cmd_set_admin(message: types.Message):

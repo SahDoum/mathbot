@@ -1,4 +1,4 @@
-from utils import bot
+from utils import bot, private_required
 from text_messages import text_messages
 from models import Catalog, User
 
@@ -11,6 +11,7 @@ def cmd_lib(message: telebot.types.Message):
     bot.reply_to(message, 'Список каталогов:', reply_markup=reply_keyboard)
 
 
+@private_required
 def cmd_add_catalog(message):
     try:
         user = User.get(user_id=message.from_user.id)

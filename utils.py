@@ -176,3 +176,24 @@ def upload_book(message, book):
 
     link = f'https://t.me/{CHANNEL_NAME[1:]}/{result.message_id}'
     return link
+
+
+# Handler decorators
+def forward_required(message_handler):
+    def wrapper(message, *args, **kwargs):
+        if not message.forward_from:
+            bot.reply_to(message, 'Вы должны зафорвардить сообщение!')
+        else:
+            message_handler(message, *args, **kwargs)
+
+    return wrapper
+
+
+def private_required(message_handler):
+    def wrapper(message, *args, **kwargs):
+        if not message.type == 'private':
+            bot.reply_to(message, 'Доступно только в приватном чате!')
+        else:
+            message_handler(message, *args, **kwargs)
+
+    return wrapper
