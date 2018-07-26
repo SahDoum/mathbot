@@ -5,6 +5,16 @@ from telebot import types
 from peewee import DoesNotExist
 
 
+def forward_required(message_handler):
+    def wrapper(message, *args, **kwargs):
+        if not message.forward_from:
+            bot.reply_to(message, 'Вы должны зафорвардить сообщение!')
+        else:
+            message_handler(message, *args, **kwargs)
+
+    return wrapper
+
+
 def cmd_set_admin(message: types.Message):
     try:
         user = User.get(message.from_user.id)
@@ -32,16 +42,16 @@ def cmd_set_moder(message: types.Message):
 
 
 # Next step handlers
+@forward_required
 def set_admin(message: types.Message):
-    bot.reply_to(message, str(message))
     user_id = message.forward_from.id
     first_name = message.forward_from.first_name
     User.insert(user_id=user_id, first_name=first_name, role='Admin').on_conflict_replace().execute()
     bot.reply_to(message, 'Админ добавлен')
 
 
+@forward_required
 def set_moder(message: types.Message):
-    bot.reply_to(message, str(message))
     user_id = message.forward_from.id
     first_name = message.forward_from.first_name
     User.insert(user_id=user_id, first_name=first_name, role='Moder').on_conflict_replace().execute()
