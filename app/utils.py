@@ -8,7 +8,7 @@ from settings import IUMURL, API_TOKEN, LOGGING_LEVEL, CHANNEL_NAME
 import telebot
 from telebot import types
 
-bot = telebot.TeleBot(API_TOKEN)
+bot = telebot.TeleBot(API_TOKEN, threaded=False)
 logger = telebot.logger
 logger.setLevel(LOGGING_LEVEL)
 
