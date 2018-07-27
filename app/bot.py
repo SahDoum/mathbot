@@ -38,7 +38,7 @@ def delete_webhook():
 
 @app.route(f'{WEBHOOK_URL_PATH}/info', methods=['GET'])
 def get_info():
-    return jsonify(bot.get_webhook_info())
+    return jsonify(str(bot.get_webhook_info()))
 
 
 @app.before_first_request
