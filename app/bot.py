@@ -23,20 +23,20 @@ def webhook():
         abort(403)
 
 
-@app.route(f'{WEBHOOK_URL_PATH}/set')
+@app.route(f'{WEBHOOK_URL_PATH}/set', methods=['GET'])
 def set_webhook():
     cert = open(PUB_CERT, 'r') if PUB_CERT else None
     response = bot.set_webhook(WEBHOOK_URL, cert)
     return str(response)
 
 
-@app.route(f'{WEBHOOK_URL_PATH}/delete')
+@app.route(f'{WEBHOOK_URL_PATH}/delete', methods=['GET'])
 def delete_webhook():
     response = bot.delete_webhook()
     return str(response)
 
 
-@app.route(f'{WEBHOOK_URL_PATH}/info')
+@app.route(f'{WEBHOOK_URL_PATH}/info', methods=['GET'])
 def get_info():
     return jsonify(bot.get_webhook_info())
 
