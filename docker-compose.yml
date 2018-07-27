@@ -1,0 +1,14 @@
+version: '3'
+services:
+  bot:
+    build: .
+    ports:
+    - "443:80"
+    volumes:
+      - ./ssl:/etc/nginx/ssl/
+    environment:
+      SOSISKA_TOKEN: ""
+      BOT_NAME: ""
+      CHANNEL_NAME: ""
+      PUB_CERT: "/etc/nginx/ssl/bot.crt"
+      HOST: ""
