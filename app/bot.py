@@ -17,7 +17,7 @@ app = Flask(__name__)
 def webhook():
     if request.headers.get('content-type') == 'application/json':
         json_string = request.get_data().decode('utf-8')
-        logging.info(json_string)
+        logging.error(json_string)
         update = types.Update.de_json(json_string)
         bot.process_new_updates([update])
         return ''
