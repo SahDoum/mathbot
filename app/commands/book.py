@@ -147,7 +147,7 @@ def inline_search_book(inline_query: types.InlineQuery):
     if len(indexed_books):
         answer = list()
         # Generate inline book panels
-        for indexed_book in indexed_books:
+        for indexed_book in indexed_books[:50]:
             book = Book.get(id=indexed_book.rowid)
             title = '"{}" {}'.format(book.name, book.author)
 
@@ -159,7 +159,7 @@ def inline_search_book(inline_query: types.InlineQuery):
                     title=title,
                     description=book.comments,
                     document_url=book.link, mime_type='application/pdf',
-                    caption=book.get_book_description(),
+                    caption=book.get_book_description()[:200],
                     reply_markup=keyboard
                 )
             else:
