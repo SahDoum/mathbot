@@ -1,6 +1,6 @@
 from .admin import cmd_set_admin, cmd_set_moder
 from .book import cmd_add_book, cmd_show_books, inline_search_book, cb_books_page, cb_delete_book
-from .catalog import cmd_lib, cmd_add_catalog
+from .catalog import cmd_lib, cmd_add_catalog, cmd_delete_catalog, cb_catalogs_page
 from .courses import cmd_add_course
 from .default import cmd_welcome, cmd_links
 
@@ -14,7 +14,7 @@ __all__ = [
            # Cmds for adding books, inline search and callback handler
            'cmd_add_book', 'cmd_show_books', 'inline_search_book', 'cb_books_page', 'cb_delete_book',
            # Cmds for adding catalogs and launching catalog menu
-           'cmd_lib', 'cmd_add_catalog',
+           'cmd_lib', 'cmd_add_catalog', 'cmd_delete_catalog', 'cb_catalogs_page',
            # Course adding cmd
            'cmd_add_course',
            # Simple "static" cmds
