@@ -15,8 +15,8 @@ def cmd_add_book(message: types.Message):
     except DoesNotExist:
         return
 
-    if not user.can_add():
-        return
+    if not user.can_edit():
+        bot.reply_to(message, 'У вас недостаточно прав.')
 
     text = ('Введите описание книги в следующем формате:\n'
             'Название книги(перенос строки)\n'
