@@ -1,11 +1,13 @@
-from utils import bot, get_book_args, upload_book, get_show_books_keyboard, get_delete_book_keyboard
+from utils import bot, get_book_args, upload_book, get_show_books_keyboard, get_delete_book_keyboard, private_required
 from models import User, Book, BookIndex, Catalog
 from settings import CHANNEL_NAME
 
 from peewee import DoesNotExist
+from telebot.apihelper import ApiException
 from telebot import types
 
 
+@private_required
 def cmd_add_book(message: types.Message):
     user_id = message.from_user.id
     try:
@@ -55,6 +57,9 @@ def add_book(message: types.Message):
     lines = message.text.splitlines()
     book_args = get_book_args(lines)
     if book_args:
+        if len(book_args['comments']) > 200:
+            bot.reply_to(message, 'Превышен лимит комментария (200), вызовите команду ещё раз.')
+            return
         book_args['added_by'] = user
         bot.reply_to(message, 'Напишите каталог, в который нужно поместить книгу или прервите командой /break')
         bot.register_next_step_handler(message, set_catalog, book_args)
@@ -120,7 +125,13 @@ def cb_books_page(callback_query):
         page = int(cb_args[1])
         text, keyboard = get_show_books_keyboard(page)
 
-        bot.edit_message_text(text, chat_id, message_id, reply_markup=keyboard, parse_mode='Markdown')
+        try:
+            bot.edit_message_text(text, chat_id, message_id, reply_markup=keyboard, parse_mode='Markdown')
+        except ApiException:
+            pass
+
+    elif len(cb_args) == 3 and cb_args[2] == 'current':
+        bot.answer_callback_query(callback_query.id, 'You are already on this page!')
 
 
 def cb_delete_book(callback_query: types.CallbackQuery):
@@ -132,7 +143,7 @@ def cb_delete_book(callback_query: types.CallbackQuery):
             bot.answer_callback_query(callback_query.id, text='Ошибка!')
             return
 
-        if user.can_edit():
+        if user.can_delete():
             try:
                 Book.delete_book(int(cb_args[1]))
                 bot.answer_callback_query(callback_query.id, text='Успешно удалено!')
@@ -144,6 +155,12 @@ def cb_delete_book(callback_query: types.CallbackQuery):
 def inline_search_book(inline_query: types.InlineQuery):
     indexed_books = BookIndex.search_bm25(inline_query.query)
 
+    try:
+        user = User.get(user_id=inline_query.from_user.id)
+        user_can_delete = user.can_delete()
+    except DoesNotExist:
+        user_can_delete = False
+
     if len(indexed_books):
         answer = list()
         # Generate inline book panels
@@ -151,7 +168,10 @@ def inline_search_book(inline_query: types.InlineQuery):
             book = Book.get(id=indexed_book.rowid)
             title = '"{}" {}'.format(book.name, book.author)
 
-            keyboard = get_delete_book_keyboard(book.id)
+            if user_can_delete:
+                keyboard = get_delete_book_keyboard(book.id)
+            else:
+                keyboard = None
 
             if book.link:
                 result = types.InlineQueryResultDocument(
