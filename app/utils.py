@@ -2,13 +2,13 @@ import datetime
 import time
 from math import ceil
 
-from models import IUMCourse, Subscription, SubscriptionChat, Book
+from models import IUMCourse, Subscription, SubscriptionChat, Book, Catalog
 from settings import IUMURL, API_TOKEN, LOGGING_LEVEL, CHANNEL_NAME
 
 import telebot
 from telebot import types
 
-bot = telebot.TeleBot(API_TOKEN, threaded=False)
+bot = telebot.TeleBot(API_TOKEN, skip_pending=True)
 logger = telebot.logger
 logger.setLevel(LOGGING_LEVEL)
 
@@ -88,12 +88,19 @@ def get_show_books_keyboard(page, limit=5):
 
     text = f'Количество книг: {books.count()}\n\n'
     for i, book in enumerate(books_on_page):
-        text += f'Каталог: {book.catalog.name}\n{book.get_book_description_md()}\n\n'
+        try:
+            catalog_name = book.catalog.name
+        except Catalog.DoesNotExist:
+            catalog_name = 'Без каталога'
+        text += f'Каталог: {catalog_name}\n{book.get_book_description_md()}\n'
 
+    text += f'Страница: {page}'
     # Add buttons with page numbers
-    keyboard.add(*[types.InlineKeyboardButton(
-        text=str(page_number+1), callback_data=f'book:{page_number+1}'
-    ) for page_number in range(pages_count)])
+    buttons = []
+    for page_number in range(1, pages_count+1):
+        callback_data = f'book:{page_number}' + (':current' if page_number == page else '')
+        buttons.append(types.InlineKeyboardButton(text=str(page_number), callback_data=callback_data))
+    keyboard.add(*buttons)
 
     return text, keyboard
 
@@ -102,6 +109,27 @@ def get_delete_book_keyboard(book_id):
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text='Удалить книгу', callback_data=f'delete_book:{book_id}'))
     return keyboard
+
+
+def get_show_catalogs_keyboard(page, limit=15):
+    catalogs = Catalog.select()
+    catalogs_on_page = catalogs.paginate(page, limit)
+    pages_count = int(ceil(catalogs.count()/limit))
+    keyboard = types.InlineKeyboardMarkup()
+
+    text = f'Количество каталогов: {catalogs.count()}\n\n'
+    for i, catalog in enumerate(catalogs_on_page):
+        text += f'{i+1}. {catalog.name} | Кол-во книг: {catalog.books.count()}\n'
+
+    text += f'\nСтраница: {page}'
+    # Add buttons with page numbers
+    buttons = []
+    for page_number in range(1, pages_count+1):
+        callback_data = f'catalog:{page_number}' + (':current' if page_number == page else '')
+        buttons.append(types.InlineKeyboardButton(text=str(page_number), callback_data=callback_data))
+
+    keyboard.add(*buttons)
+    return text, keyboard
 
 
 # Model creation args validators
@@ -126,7 +154,8 @@ def get_book_args(lines):
         if not all((name, author, comments)):
             return
         else:
-            return {'name': name, 'author': author, 'comments': '\n'.join(comments)}
+            comments_string = '\n'.join(comments)
+            return {'name': name, 'author': author, 'comments': comments_string}
 
 
 # Separate thread sheet updater

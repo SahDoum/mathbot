@@ -65,6 +65,7 @@ bot.message_handler(commands=['add_course'])(cmd_add_course)
 # Catalog commands
 bot.message_handler(commands=['lib', 'lit', 'catalog'])(cmd_lib)
 bot.message_handler(commands=['add_catalog'])(cmd_add_catalog)
+bot.message_handler(commands=['delete_catalog'])(cmd_delete_catalog)
 
 # Admin commands
 bot.message_handler(commands=['set_admin'])(cmd_set_admin)
@@ -106,6 +107,10 @@ bot.callback_query_handler(func=lambda callback_query: callback_query.data.split
     cb_delete_book  # Delete book
 )
 
+# Catalogs
+bot.callback_query_handler(func=lambda callback_query: callback_query.data.split(':')[0] == 'catalog')(
+    cb_catalogs_page  # Show books menu
+)
 
 # Inline searching handler
 bot.inline_handler(lambda query: bool(query.query))(inline_search_book)

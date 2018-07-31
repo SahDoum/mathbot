@@ -28,7 +28,7 @@ class User(BaseModel):
     def can_affirm_books(self):
         return self.role in ['Admin', 'Moder', 'Creator']
 
-    def can_delete_catalog(self):
+    def can_delete(self):
         return self.role in ['Admin', 'Creator']
 
     def can_assign_admin(self):

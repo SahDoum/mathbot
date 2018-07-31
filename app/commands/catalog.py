@@ -1,14 +1,14 @@
-from utils import bot, private_required
-from text_messages import text_messages
+from utils import bot, private_required, get_show_catalogs_keyboard
 from models import Catalog, User
 
 import telebot.types
+from telebot.apihelper import ApiException
 from peewee import DoesNotExist
 
 
 def cmd_lib(message: telebot.types.Message):
-    reply_keyboard = None
-    bot.reply_to(message, 'Список каталогов:', reply_markup=reply_keyboard)
+    text, reply_keyboard = get_show_catalogs_keyboard(1)
+    bot.reply_to(message, text, reply_markup=reply_keyboard)
 
 
 @private_required
@@ -31,12 +31,37 @@ def cmd_add_catalog(message):
         bot.reply_to(message, 'Новый каталог добавлен')
 
 
-def callback_inline(callback_query):
-    if callback_query.message:
-        catalog_id = int(callback_query.data.split(' ', maxsplit=1)[1])
-        dsc = Catalog.get_catalog_description(catalog_id)
-        dsc += text_messages['inline_mode']
-        bot.edit_message_text(chat_id=callback_query.message.chat.id,
-                              message_id=callback_query.message.message_id,
-                              text=dsc, parse_mode='Markdown',
-                              disable_web_page_preview=True)
+@private_required
+def cmd_delete_catalog(message):
+    try:
+        user = User.get(user_id=message.from_user.id)
+    except DoesNotExist:
+        return
+
+    if not user.can_edit():
+        return
+
+    cat_name = message.text.split(' ', maxsplit=1)[1]
+    try:
+        catalog = Catalog.get(name=cat_name)
+        catalog.delete_instance()
+        bot.reply_to(message, 'Каталог успешно удалён!')
+    except DoesNotExist:
+        bot.reply_to(message, 'Такого каталога не существует. Введите /lib чтобы посмотреть доступные каталоги')
+
+
+# Callback handler
+def cb_catalogs_page(callback_query):
+    cb_args = callback_query.data.split(':')
+    if len(cb_args) == 2 and cb_args[1].isdigit():
+        chat_id = callback_query.message.chat.id
+        message_id = callback_query.message.message_id
+        page = int(cb_args[1])
+        text, keyboard = get_show_catalogs_keyboard(page)
+        try:
+            bot.edit_message_text(text, chat_id, message_id, reply_markup=keyboard, parse_mode='Markdown')
+        except ApiException:
+            pass
+
+    elif len(cb_args) == 3 and cb_args[2] == 'current':
+        bot.answer_callback_query(callback_query.id, 'You are already on this page!')

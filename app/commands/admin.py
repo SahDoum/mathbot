@@ -1,10 +1,11 @@
 from models import User
-from utils import bot, forward_required
+from utils import bot, forward_required, private_required
 
 from telebot import types
 from peewee import DoesNotExist
 
 
+@private_required
 def cmd_set_admin(message: types.Message):
     try:
         user = User.get(message.from_user.id)
@@ -18,6 +19,7 @@ def cmd_set_admin(message: types.Message):
     bot.register_next_step_handler(message, set_admin)
 
 
+@private_required
 def cmd_set_moder(message: types.Message):
     try:
         user = User.get(message.from_user.id)
