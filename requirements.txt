@@ -2,3 +2,4 @@ pytelegrambotapi
 peewee
 requests
 lxml
+flask

@@ -1,7 +1,54 @@
 import threading
+import logging
 
 from utils import sheets_updater, bot
+from settings import WEBHOOK_URL, WEBHOOK_URL_PATH, PUB_CERT
 from commands import *
+
+from flask import Flask, request, abort, jsonify
+from telebot import types
+
+# === Flask settings and routes ===
+app = Flask(__name__)
+
+
+# Process webhook calls
+@app.route(WEBHOOK_URL_PATH, methods=['POST'])
+def webhook():
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        logging.error(json_string)
+        update = types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return ''
+    else:
+        abort(403)
+
+
+@app.route(f'{WEBHOOK_URL_PATH}/set', methods=['GET'])
+def set_webhook():
+    cert = open(PUB_CERT, 'r') if PUB_CERT else None
+    response = bot.set_webhook(WEBHOOK_URL, cert)
+    return str(response)
+
+
+@app.route(f'{WEBHOOK_URL_PATH}/delete', methods=['GET'])
+def delete_webhook():
+    response = bot.delete_webhook()
+    return str(response)
+
+
+@app.route(f'{WEBHOOK_URL_PATH}/info', methods=['GET'])
+def get_info():
+    return jsonify(str(bot.get_webhook_info()))
+
+
+@app.before_first_request
+def run_sheets_updater():
+    t = threading.Thread(target=sheets_updater, args=())
+    t.daemon = True
+    t.start()
+
 
 # === Message handlers ===
 
@@ -64,7 +111,7 @@ bot.callback_query_handler(func=lambda callback_query: callback_query.data.split
 bot.inline_handler(lambda query: bool(query.query))(inline_search_book)
 
 if __name__ == '__main__':
-    t = threading.Thread(target=sheets_updater, args=())
+    t = threading.Thread(target=sheets_updater)
     t.daemon = True
     t.start()
 
