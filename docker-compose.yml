@@ -1,6 +1,6 @@
 version: '3'
 services:
-  bot:
+  flask_app:
     build: .
     ports:
     - "443:443"
@@ -12,3 +12,12 @@ services:
       CHANNEL_NAME: ""
       PUB_CERT: "/etc/nginx/ssl/bot.crt"
       HOST: ""
+
+  bot:
+    build: .
+    command: ['python', './bot.py']
+    environment:
+      DEBUG: "no"
+
+  redis:
+    image: redis
