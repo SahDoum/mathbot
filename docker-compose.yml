@@ -12,12 +12,16 @@ services:
       CHANNEL_NAME: ""
       PUB_CERT: "/etc/nginx/ssl/bot.crt"
       HOST: ""
+    depends_on:
+      - "redis"
 
   bot:
     build: .
     command: ['python', './bot.py']
     environment:
       DEBUG: "no"
+    depends_on:
+      - "redis"
 
   redis:
     image: redis
