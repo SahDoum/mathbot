@@ -7,11 +7,11 @@ services:
     volumes:
       - ./ssl:/etc/nginx/ssl/
     environment:
-      SOSISKA_TOKEN: ""
-      BOT_NAME: ""
-      CHANNEL_NAME: ""
+      SOSISKA_TOKEN: "123:XXX"
+      BOT_NAME: "@BOT_NAME"
+      CHANNEL_NAME: "@CHANNEL_NAME"
       PUB_CERT: "/etc/nginx/ssl/bot.crt"
-      HOST: ""
+      HOST: "https://"
     depends_on:
       - "redis"
 
@@ -20,6 +20,8 @@ services:
     command: ['python', './bot.py']
     environment:
       DEBUG: "no"
+      SOSISKA_TOKEN: "123:XXX"
+
     depends_on:
       - "redis"
 
