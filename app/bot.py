@@ -81,7 +81,7 @@ if __name__ == '__main__':
     if DEBUG == 'no':
         r = StrictRedis('redis')
         while True:
-            json_string = str(r.brpop('bot_queue'))
+            json_string = r.brpop('bot_queue')[1].decode()
             update = types.Update.de_json(json_string)
             bot.process_new_updates([update])
     else:
