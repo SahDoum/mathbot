@@ -2,7 +2,7 @@ import datetime
 import time
 from math import ceil
 
-from models import IUMCourse, Subscription, SubscriptionChat, Book, Catalog
+from models import IUMCourse, Subscription, SubscriptionChat, Book, Catalog, User
 from settings import IUMURL, API_TOKEN, LOGGING_LEVEL, CHANNEL_NAME
 
 import telebot
@@ -226,3 +226,21 @@ def private_required(message_handler):
             message_handler(message, *args, **kwargs)
 
     return wrapper
+
+
+def user_required(*permission_level):
+    def outer_wrapper(message_handler):
+        def wrapper(message, *args, **kwargs):
+            try:
+                user = User.get(message.from_user.id)
+            except User.DoesNotExist:
+                return
+
+            if permission_level and user.role not in permission_level:
+                bot.reply_to(message, 'У вас недостаточно прав!')
+                return
+
+            message_handler(message, *args, **kwargs)
+
+        return wrapper
+    return outer_wrapper
