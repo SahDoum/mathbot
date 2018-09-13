@@ -1,4 +1,4 @@
-from utils import bot, private_required, get_show_catalogs_keyboard
+from utils import bot, private_required, get_show_catalogs_keyboard, user_required
 from models import Catalog, User
 
 import telebot.types
@@ -12,17 +12,10 @@ def cmd_lib(message: telebot.types.Message):
 
 
 @private_required
+@user_required('Admin', 'Moder', 'Creator')
 def cmd_add_catalog(message):
-    try:
-        user = User.get(user_id=message.from_user.id)
-    except DoesNotExist:
-        return
-
-    if not user.can_edit():
-        return
-
     if len(message.text.split(' ')) < 2:
-        return
+        bot.reply_to(message, 'Неправильный формат ввода')
 
     cat_name = message.text.split(' ', maxsplit=1)[1]
 
@@ -32,21 +25,18 @@ def cmd_add_catalog(message):
 
 
 @private_required
+@user_required('Admin', 'Moder', 'Creator')
 def cmd_delete_catalog(message):
-    try:
-        user = User.get(user_id=message.from_user.id)
-    except DoesNotExist:
-        return
-
-    if not user.can_edit():
-        return
+    if len(message.text.split(' ')) < 2:
+        bot.reply_to(message, 'Неправильный формат ввода')
 
     cat_name = message.text.split(' ', maxsplit=1)[1]
+
     try:
         catalog = Catalog.get(name=cat_name)
         catalog.delete_instance()
         bot.reply_to(message, 'Каталог успешно удалён!')
-    except DoesNotExist:
+    except Catalog.DoesNotExist:
         bot.reply_to(message, 'Такого каталога не существует. Введите /lib чтобы посмотреть доступные каталоги')
 
 

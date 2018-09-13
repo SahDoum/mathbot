@@ -1,4 +1,4 @@
-from utils import bot, get_book_args, upload_book, get_show_books_keyboard, get_delete_book_keyboard, private_required
+from utils import bot, get_book_args, upload_book, get_show_books_keyboard, get_delete_book_keyboard, private_required, user_required
 from models import User, Book, BookIndex, Catalog
 from settings import CHANNEL_NAME
 
@@ -8,17 +8,8 @@ from telebot import types
 
 
 @private_required
+@user_required('Admin', 'Moder', 'Creator')
 def cmd_add_book(message: types.Message):
-    user_id = message.from_user.id
-    try:
-        user = User.get(user_id)
-    except DoesNotExist:
-        return
-
-    if not user.can_edit():
-        bot.reply_to(message, 'У вас недостаточно прав.')
-        return
-
     text = ('Введите описание книги в следующем формате:\n'
             'Название книги(перенос строки)\n'
             'Автор(перенос строки)\n'
@@ -47,13 +38,7 @@ def cmd_show_books(message: types.Message):
 # Next step handlers
 def add_book(message: types.Message):
     user_id = message.from_user.id
-    try:
-        user = User.get(user_id)
-        if not user.can_add():
-            return
-
-    except DoesNotExist:
-        return
+    user = User.get(user_id=user_id)
 
     lines = message.text.splitlines()
     book_args = get_book_args(lines)
