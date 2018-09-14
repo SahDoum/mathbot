@@ -1,9 +1,12 @@
 from settings import IUMURL
+from datetime import datetime
+import logging
 
 import requests
 from lxml import etree
-from playhouse.sqlite_ext import SqliteExtDatabase, CharField, Model, TextField, ForeignKeyField, \
+from playhouse.sqlite_ext import SqliteExtDatabase, CharField, TextField, ForeignKeyField, \
     FTSModel, SearchField, IntegerField, RowIDField, DateTimeField, DoesNotExist
+from playhouse.signals import Model, post_save
 
 
 db = SqliteExtDatabase('data.db')
@@ -16,6 +19,7 @@ class BaseModel(Model):
 
 class User(BaseModel):
     user_id = IntegerField(unique=True)
+    username = CharField(null=True)
     first_name = CharField()
     role = CharField()
 
@@ -165,4 +169,39 @@ class Subscription(BaseModel):
     course = ForeignKeyField(IUMCourse)
 
 
-db.create_tables([User, Catalog, Book, BookIndex, IUMCourse, SubscriptionChat, Subscription], safe=True)
+# Logging action model
+class Action(BaseModel):
+    action = TextField()
+    user = ForeignKeyField(User, null=True)
+    chat_id = IntegerField(null=True)
+    chat_name = TextField(null=True)
+    date = DateTimeField(default=datetime.now())
+    body = TextField(null=True)
+
+    def __str__(self):
+        action, user_id, username, chat_id, chat_name = self.action, self.user.user_id, self.user.username, \
+                                                        self.chat_id, self.chat_name
+
+        def generate_user_string():
+            return f'User {user_id}' \
+                   f'{" (@%s)" % username if username else ""}'
+
+        def generate_chat_string():
+            return f'{" | Chat: %s" % chat_id if chat_id else ""}' \
+                   f'{" (%s)" % chat_name if chat_name else ""}'
+
+        if self.user:
+            return f'{action.upper()}: {generate_user_string()}{generate_chat_string()} ' \
+                   f'{self.body if self.body else ""}'
+
+        else:
+            return f'{action.upper()}: {generate_chat_string()}'\
+                   f'{self.body if self.body else ""}'
+
+
+@post_save(sender=Action)
+def on_action_save(model_class, instance, created):
+    logging.info(instance)
+
+
+db.create_tables([User, Catalog, Book, BookIndex, IUMCourse, SubscriptionChat, Subscription, Action], safe=True)
