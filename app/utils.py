@@ -240,7 +240,7 @@ def user_required(*permission_level):
                 bot.reply_to(message, 'У вас недостаточно прав!')
                 return
 
-            message_handler(message, *args, **kwargs)
+            message_handler(message, user=user, *args, **kwargs)
 
         return wrapper
     return outer_wrapper
