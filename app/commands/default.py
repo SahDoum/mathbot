@@ -7,7 +7,7 @@ import telebot.types
 
 def cmd_welcome(message: telebot.types.Message):
     User.insert(user_id=message.from_user.id, first_name=message.from_user.first_name,
-                role='User').on_conflict_ignore().execute()
+                username=message.from_user.username, role='User').on_conflict_ignore().execute()
     bot.reply_to(message, text_messages['help'])
 
 
