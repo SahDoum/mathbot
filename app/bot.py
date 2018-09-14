@@ -1,4 +1,6 @@
 import threading
+import logging
+
 
 from settings import DEBUG
 from utils import sheets_updater, bot
@@ -7,6 +9,9 @@ from commands import *
 from redis import StrictRedis
 from telebot import types
 
+logging.basicConfig(filename='mathbot.log',
+                    level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # === Message handlers ===
 
