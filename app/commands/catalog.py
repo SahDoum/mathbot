@@ -13,7 +13,7 @@ def cmd_lib(message: telebot.types.Message):
 
 @private_required
 @user_required('Admin', 'Moder', 'Creator')
-def cmd_add_catalog(message):
+def cmd_add_catalog(message: telebot.types.Message, user):
     if len(message.text.split(' ')) < 2:
         bot.reply_to(message, 'Неправильный формат ввода')
 
@@ -26,7 +26,7 @@ def cmd_add_catalog(message):
 
 @private_required
 @user_required('Admin', 'Moder', 'Creator')
-def cmd_delete_catalog(message):
+def cmd_delete_catalog(message: telebot.types.Message, user):
     if len(message.text.split(' ')) < 2:
         bot.reply_to(message, 'Неправильный формат ввода')
 

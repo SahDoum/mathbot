@@ -9,7 +9,7 @@ from telebot import types
 
 @private_required
 @user_required('Admin', 'Moder', 'Creator')
-def cmd_add_book(message: types.Message):
+def cmd_add_book(message: types.Message, user):
     text = ('Введите описание книги в следующем формате:\n'
             'Название книги(перенос строки)\n'
             'Автор(перенос строки)\n'
